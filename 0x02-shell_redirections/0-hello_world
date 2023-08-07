@@ -1,6 +1,2 @@
 #!/bin/bash
-#include <stdio.h>
-main()
-{
-	printf("Hello, World/n")
-}
+echo  “Hello, World”
