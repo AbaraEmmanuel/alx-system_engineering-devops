@@ -1,30 +1,50 @@
-# Setup New Ubuntu server with nginx
-# and add a custom HTTP header
+#!/usr/bin/env bash
+# configure web-02 to be identical to web-01
+# The name of the custom HTTP header must be X-Served-By
+# The value of the custom HTTP header must be the hostname of the server Nginx is running on
+#!/usr/bin/env bash
 
-exec { 'update system':
-        command => '/usr/bin/apt-get update',
-}
+# Update package repositories
+sudo apt-get -y update
 
-package { 'nginx':
-	ensure => 'installed',
-	require => Exec['update system']
-}
+# Install Nginx
+sudo apt-get -y install nginx
 
-file {'/var/www/html/index.html':
-	content => 'Hello World!'
-}
+# Allow Nginx HTTP traffic
+sudo ufw allow 'Nginx HTTP'
 
-exec {'redirect_me':
-	command => 'sed -i "24i\	rewrite ^/redirect_me https://th3-gr00t.tk/ permanent;" /etc/nginx/sites-available/default',
-	provider => 'shell'
-}
+# Create necessary directories and set permissions
+sudo mkdir -p /var/www/html /var/www/error
+sudo chmod -R 755 /var/www
 
-exec {'HTTP header':
-	command => 'sed -i "25i\	add_header X-Served-By \$hostname;" /etc/nginx/sites-available/default',
-	provider => 'shell'
-}
+# Create index and 404 pages
+echo 'Hello World!' | sudo tee /var/www/html/index.html >/dev/null
+echo "Ceci n'est pas une page" | sudo tee /var/www/html/404.html >/dev/null
 
-service {'nginx':
-	ensure => running,
-	require => Package['nginx']
+# Configure Nginx with custom header
+server_config=$(cat <<EOF
+server {
+    listen 80 default_server;
+    listen [::]:80 default_server;
+    root /var/www/html;
+    index index.html index.htm index.nginx-debian.html;
+    server_name _;
+    add_header X-Served-By \$hostname;
+    location / {
+        try_files \$uri \$uri/ =404;
+    }
+    if (\$request_filename ~ redirect_me) {
+        rewrite ^ https://youtube.com permanent;
+    }
+    error_page 404 /404.html;
+    location = /404.html {
+        internal;
+    }
 }
+EOF
+)
+
+echo "$server_config" | sudo tee /etc/nginx/sites-enabled/default >/dev/null
+
+# Restart Nginx service
+sudo service nginx restart
