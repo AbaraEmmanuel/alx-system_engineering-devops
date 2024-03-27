@@ -1,6 +1,5 @@
 
 #!/usr/bin/env bash
-<<<<<<< HEAD
 #Installs and configures HAproxy in a load balancer server
 
 apt-get install -y software-properties-common
