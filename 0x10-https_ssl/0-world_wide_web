@@ -1,0 +1,42 @@
+#!/usr/bin/env bash
+# Script to display information about subdomains
+
+# Function to query DNS records and display information
+display_info() {
+    local domain="$1"
+    local subdomain="$2"
+
+    if [[ -z "$subdomain" ]]; then
+        subdomains=("www" "lb-01" "web-01" "web-02")
+    else
+        subdomains=("$subdomain")
+    fi
+
+    for sub in "${subdomains[@]}"; do
+        # Query DNS record
+        record=$(dig +short "$sub.$domain" | head -n 1)
+
+        if [[ -n "$record" ]]; then
+            # Determine record type
+            if dig +short -t CNAME "$sub.$domain" | grep -q '\.$'; then
+                record_type="CNAME"
+            else
+                record_type="A"
+            fi
+            echo "The subdomain $sub is a $record_type record and points to $record"
+        fi
+    done
+}
+
+# Check if domain and subdomain parameters are provided
+if [[ $# -eq 1 ]]; then
+    domain="$1"
+    display_info "$domain"
+elif [[ $# -eq 2 ]]; then
+    domain="$1"
+    subdomain="$2"
+    display_info "$domain" "$subdomain"
+else
+    echo "Usage: $0 <domain> [subdomain]"
+    exit 1
+fi
